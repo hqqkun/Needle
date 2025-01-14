@@ -6,6 +6,7 @@ from needle.autograd import Tensor
 from needle import ops
 import needle.init as init
 import numpy as np
+from functools import reduce
 
 
 class Parameter(Tensor):
@@ -90,12 +91,12 @@ class Linear(Module):
 
         ### BEGIN YOUR SOLUTION
         self.weight = Parameter(
-            init.kaiming_uniform(in_features, out_features, dtype=dtype)
-        ).detach()
+            init.kaiming_uniform(in_features, out_features, dtype=dtype, device=device)
+        )
         self.bias = (
-            Parameter(init.kaiming_uniform(out_features, 1, dtype=dtype)).reshape(
-                (1, out_features)
-            ).detach()
+            Parameter(
+                init.kaiming_uniform(out_features, 1, dtype=dtype, device=device)
+            ).reshape((1, out_features))
             if bias
             else None
         )
@@ -111,9 +112,11 @@ class Linear(Module):
 
 
 class Flatten(Module):
-    def forward(self, X):
+    def forward(self, X: Tensor):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        B = X.shape[0]
+        numel = reduce(lambda x, y: x * y, X.shape, 1)
+        return X.reshape((B, numel // B))
         ### END YOUR SOLUTION
 
 
@@ -143,11 +146,11 @@ class SoftmaxLoss(Module):
         ### BEGIN YOUR SOLUTION
         assert len(logits.shape) == 2 and len(y.shape) == 1
         assert logits.shape[0] == y.shape[0]
-        
+
         batch, classes = logits.shape[0], logits.shape[1]
-        sum_exp_Z  = ops.logsumexp(logits, axes=(1, ))
+        sum_exp_Z = ops.logsumexp(logits, axes=(1,))
         y_one_hot = init.one_hot(classes, y)
-        value_y = (logits * y_one_hot).sum(axes=(1, ))
+        value_y = (logits * y_one_hot).sum(axes=(1,))
         sum_error = (sum_exp_Z - value_y).sum()
         return sum_error / batch
         ### END YOUR SOLUTION
@@ -175,12 +178,26 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(init.ones(dim, dtype=dtype, device=device))
+        self.bias = Parameter(init.zeros(dim, dtype=dtype, device=device))
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        batch, layer = x.shape
+        mean = (x.sum(axes=(1,)) / layer).reshape((batch, 1)).broadcast_to(x.shape)
+        numerator = x - mean
+        VarX = (
+            ((numerator * numerator).sum(axes=(1,)) / layer)
+            .reshape((batch, 1))
+            .broadcast_to(x.shape)
+        )
+        denominator = (VarX + self.eps) ** 0.5
+        w1 = self.weight.broadcast_to(x.shape)
+        b1 = self.bias.broadcast_to(x.shape)
+
+        return (w1 * numerator) / denominator + b1
+
         ### END YOUR SOLUTION
 
 
