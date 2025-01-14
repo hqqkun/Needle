@@ -95,11 +95,14 @@ class Linear(Module):
         )
         self.bias = (
             Parameter(
-                init.kaiming_uniform(out_features, 1, dtype=dtype, device=device)
-            ).reshape((1, out_features))
+                init.kaiming_uniform(
+                    out_features, 1, dtype=dtype, device=device
+                ).reshape((1, out_features))
+            )
             if bias
             else None
         )
+
         ### END YOUR SOLUTION
 
     def forward(self, X: Tensor) -> Tensor:
@@ -209,7 +212,7 @@ class Dropout(Module):
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
         if self.training:
-            mask = init.randb(*x.shape, p=1-self.p)
+            mask = init.randb(*x.shape, p=1 - self.p)
             return (x * mask) / (1 - self.p)
         else:
             return x

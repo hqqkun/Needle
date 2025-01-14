@@ -184,7 +184,7 @@ class Reshape(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return array_api.reshape(a, shape=self.shape)
+        return array_api.reshape(a, newshape=self.shape)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node: Tensor):
