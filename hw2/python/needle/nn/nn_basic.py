@@ -1,5 +1,6 @@
 """The module.
 """
+
 from typing import List, Callable, Any
 from needle.autograd import Tensor
 from needle import ops
@@ -88,12 +89,24 @@ class Linear(Module):
         self.out_features = out_features
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(
+            init.kaiming_uniform(in_features, out_features, dtype=dtype)
+        ).detach()
+        self.bias = (
+            Parameter(init.kaiming_uniform(out_features, 1, dtype=dtype)).reshape(
+                (1, out_features)
+            ).detach()
+            if bias
+            else None
+        )
         ### END YOUR SOLUTION
 
     def forward(self, X: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        out = ops.matmul(X, self.weight)
+        if self.bias:
+            out = out + self.bias.broadcast_to(out.shape)
+        return out
         ### END YOUR SOLUTION
 
 
@@ -109,6 +122,7 @@ class ReLU(Module):
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION
+
 
 class Sequential(Module):
     def __init__(self, *modules):
@@ -142,7 +156,6 @@ class BatchNorm1d(Module):
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION
-
 
 
 class LayerNorm1d(Module):
