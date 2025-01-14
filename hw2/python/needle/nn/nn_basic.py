@@ -131,7 +131,10 @@ class Sequential(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        out = x
+        for module in self.modules:
+            out = module(out)
+        return out
         ### END YOUR SOLUTION
 
 
