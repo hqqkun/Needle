@@ -10,7 +10,7 @@ sys.path.append("python/")
 import needle as ndl
 
 
-def parse_mnist(image_filesname, label_filename):
+def parse_mnist(image_filename, label_filename):
     """Read an images and labels file in MNIST format.  See this page:
     http://yann.lecun.com/exdb/mnist/ for a description of the file format.
 
@@ -33,11 +33,21 @@ def parse_mnist(image_filesname, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    with gzip.open(image_filename, "rb") as file_image:
+        _, nums, row, col = struct.unpack(">IIII", file_image.read(16))
+        images = np.reshape(
+            np.frombuffer(file_image.read(), dtype=np.uint8), (nums, row * col)
+        )
+
+    with gzip.open(label_filename, "rb") as file_label:
+        _, _ = struct.unpack(">II", file_label.read(8))
+        labels = np.frombuffer(file_label.read(), dtype=np.uint8)
+
+    return (np.astype(images / 255.0, np.float32), labels)
     ### END YOUR SOLUTION
 
 
-def softmax_loss(Z, y_one_hot):
+def softmax_loss(Z: ndl.Tensor, y_one_hot: ndl.Tensor):
     """Return softmax loss.  Note that for the purposes of this assignment,
     you don't need to worry about "nicely" scaling the numerical properties
     of the log-sum-exp computation, but can just compute this directly.
@@ -54,7 +64,10 @@ def softmax_loss(Z, y_one_hot):
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    sum_exp_Z = ndl.exp(Z).sum(axes=(1,))       # (batch_size, )
+    value_y = (Z * y_one_hot).sum(axes=(1,))    # (batch_size, )
+    sum_error = (ndl.log(sum_exp_Z) - value_y).sum()
+    return sum_error / Z.shape[0]
     ### END YOUR SOLUTION
 
 
