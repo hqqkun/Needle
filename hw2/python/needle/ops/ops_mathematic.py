@@ -321,7 +321,7 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return out_grad / node.inputs[0]
+        return (out_grad / node.inputs[0], )
         ### END YOUR SOLUTION
 
 
@@ -337,7 +337,7 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return out_grad * node
+        return (out_grad * node,)
         ### END YOUR SOLUTION
 
 
@@ -346,7 +346,7 @@ def exp(a):
 
 
 class ReLU(TensorOp):
-    def compute(self, a : NDArray):
+    def compute(self, a: NDArray):
         ### BEGIN YOUR SOLUTION
         return array_api.maximum(0, a)
         ### END YOUR SOLUTION
@@ -354,8 +354,9 @@ class ReLU(TensorOp):
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
         mask = array_api.where(node.realize_cached_data() > 0, 1, 0)
-        return (out_grad* mask, )
+        return (out_grad * mask,)
         ### END YOUR SOLUTION
+
 
 def relu(a):
     return ReLU()(a)
