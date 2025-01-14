@@ -183,12 +183,12 @@ class BatchNorm1d(Module):
             numerator = x - mean.broadcast_to(x.shape)
             VarX = (numerator * numerator).sum(axes=(0,)) / batch
 
-            self.running_mean = (
+            self.running_mean.data = (
                 1 - self.momentum
-            ) * self.running_mean + self.momentum * mean
-            self.running_var = (
+            ) * self.running_mean.data + self.momentum * mean.data
+            self.running_var.data = (
                 1 - self.momentum
-            ) * self.running_var + self.momentum * VarX
+            ) * self.running_var.data + self.momentum * VarX.data
             denominator = (VarX.broadcast_to(x.shape) + self.eps) ** 0.5
             return (w1 * numerator) / denominator + b1
 
