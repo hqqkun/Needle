@@ -166,12 +166,37 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(init.ones(dim), dtype=dtype)
+        self.bias = Parameter(init.zeros(dim), dtype=dtype)
+        self.running_mean = init.zeros(dim, dtype=dtype)
+        self.running_var = init.ones(dim, dtype=dtype)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        w1 = self.weight.broadcast_to(x.shape)
+        b1 = self.bias.broadcast_to(x.shape)
+
+        if self.training:
+            batch = x.shape[0]
+            mean = x.sum(axes=(0,)) / batch
+            numerator = x - mean.broadcast_to(x.shape)
+            VarX = (numerator * numerator).sum(axes=(0,)) / batch
+
+            self.running_mean = (
+                1 - self.momentum
+            ) * self.running_mean + self.momentum * mean
+            self.running_var = (
+                1 - self.momentum
+            ) * self.running_var + self.momentum * VarX
+            denominator = (VarX.broadcast_to(x.shape) + self.eps) ** 0.5
+            return (w1 * numerator) / denominator + b1
+
+        else:
+            mu = self.running_mean.broadcast_to(x.shape)
+            std = (self.running_var + self.eps).broadcast_to(x.shape) ** 0.5
+            out = (x - mu) / std
+            return w1 * out + b1
         ### END YOUR SOLUTION
 
 

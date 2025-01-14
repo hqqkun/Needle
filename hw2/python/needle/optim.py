@@ -72,5 +72,32 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.t = self.t + 1
+        for w in self.params:
+            if w in self.m:
+                m = (
+                    self.beta1 * self.m[w]
+                    + (1 - self.beta1) * (self.weight_decay * w.data + w.grad).data
+                )
+            else:
+                m = ((1 - self.beta1) * (self.weight_decay * w.data + w.grad)).data
+            if w in self.v:
+                v = (
+                    self.beta2 * self.v[w]
+                    + (1 - self.beta2)
+                    * ((self.weight_decay * w.data + w.grad) ** 2).data
+                )
+            else:
+                v = (
+                    (1 - self.beta2) * ((self.weight_decay * w.data + w.grad) ** 2)
+                ).data
+            self.m[w] = m
+            self.v[w] = v
+            m_hat = m / (1 - self.beta1**self.t)
+            v_hat = v / (1 - self.beta2**self.t)
+
+            w.data -= ndl.Tensor(
+                self.lr * (m_hat / (v_hat**0.5 + self.eps)),
+                dtype=w.dtype,
+            )
+        ## END YOUR SOLUTION
