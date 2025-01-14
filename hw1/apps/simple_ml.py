@@ -1,5 +1,6 @@
 """hw1/apps/simple_ml.py"""
 
+import math
 import struct
 import gzip
 import numpy as np
@@ -96,7 +97,25 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     """
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    
+    # get y_one_hot
+    y_one_hot = np.zeros((y.shape[0], W2.shape[1]), dtype=np.float32)
+    y_one_hot[np.arange(len(y)), y] = 1.0
+    
+    rows = np.shape(X)[0]
+    num_iter = math.ceil(rows / batch)
+    for i in range(num_iter):
+        end = min(rows, (i + 1) * batch)
+        num = end - i * batch
+        batchX = ndl.Tensor(X[i * batch : end])
+        batchY = ndl.Tensor(y_one_hot[i * batch : end])
+        Z = ndl.relu(batchX.matmul(W1)).matmul(W2)
+        loss : ndl.Tensor = softmax_loss(Z, batchY)
+        loss.backward()
+        W1 = ndl.Tensor(W1.data - lr * W1.grad.data)
+        W2 = ndl.Tensor(W2.data - lr * W2.grad.data)
+        
+    return (W1, W2)
     ### END YOUR SOLUTION
 
 

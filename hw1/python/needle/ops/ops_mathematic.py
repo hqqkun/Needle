@@ -346,16 +346,16 @@ def exp(a):
 
 
 class ReLU(TensorOp):
-    def compute(self, a):
+    def compute(self, a : NDArray):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.maximum(0, a)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        mask = array_api.where(node.realize_cached_data() > 0, 1, 0)
+        return (out_grad* mask, )
         ### END YOUR SOLUTION
-
 
 def relu(a):
     return ReLU()(a)
