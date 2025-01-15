@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -233,55 +234,56 @@ void ScalarPower(const AlignedArray &a, scalar_t val, AlignedArray *out) {
   }
 }
 
-void EwiseMaximum(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+void EwiseMaximum(const AlignedArray &a, const AlignedArray &b,
+                  AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = std::max(a.ptr[i], b.ptr[i]);
   }
 }
 
-void ScalarMaximum(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+void ScalarMaximum(const AlignedArray &a, scalar_t val, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = std::max(a.ptr[i], val);
   }
 }
 
-void EwiseEq(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+void EwiseEq(const AlignedArray &a, const AlignedArray &b, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = a.ptr[i] == b.ptr[i];
   }
 }
 
-void ScalarEq(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+void ScalarEq(const AlignedArray &a, scalar_t val, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = a.ptr[i] == val;
   }
 }
 
-void EwiseGe(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+void EwiseGe(const AlignedArray &a, const AlignedArray &b, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = a.ptr[i] >= b.ptr[i];
   }
 }
 
-void ScalarGe(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+void ScalarGe(const AlignedArray &a, scalar_t val, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = a.ptr[i] >= val;
   }
 }
 
-void EwiseLog(const AlignedArray& a, AlignedArray* out) {
+void EwiseLog(const AlignedArray &a, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = std::log(a.ptr[i]);
   }
 }
 
-void EwiseExp(const AlignedArray& a, AlignedArray* out) {
+void EwiseExp(const AlignedArray &a, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = std::exp(a.ptr[i]);
   }
 }
 
-void EwiseTanh(const AlignedArray& a, AlignedArray* out) {
+void EwiseTanh(const AlignedArray &a, AlignedArray *out) {
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = std::tanh(a.ptr[i]);
   }
@@ -303,7 +305,19 @@ void Matmul(const AlignedArray &a, const AlignedArray &b, AlignedArray *out,
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  for (size_t i = 0; i < m; ++i) {
+    for (size_t j = 0; j < p; ++j) {
+      out->ptr[i * p + j] = 0;
+    }
+  }
+
+  for (size_t k = 0; k < n; ++k) {
+    for (size_t i = 0; i < m; ++i) {
+      for (size_t j = 0; j < p; ++j) {
+        out->ptr[i * p + j] += a.ptr[i * n + k] * b.ptr[k * p + j];
+      }
+    }
+  }
   /// END SOLUTION
 }
 
@@ -334,7 +348,16 @@ inline void AlignedDot(const float *__restrict__ a, const float *__restrict__ b,
   out = (float *)__builtin_assume_aligned(out, TILE * ELEM_SIZE);
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  for (size_t i = 0; i < TILE; ++i) {
+    for (size_t j = 0; j < TILE; ++j) {
+      scalar_t psum = out[i * TILE + j];
+      for (size_t k = 0; k < TILE; ++k) {
+        psum += a[i * TILE + k] * b[k * TILE + j];
+      }
+      out[i * TILE + j] = psum;
+    }
+  }
+
   /// END SOLUTION
 }
 
@@ -361,7 +384,23 @@ void MatmulTiled(const AlignedArray &a, const AlignedArray &b,
    *
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  uint32_t size = m * n;
+  for (uint32_t i = 0; i < size; ++i) {
+    out->ptr[i] = static_cast<scalar_t>(0.0f);
+  }
+
+  uint32_t m1 = m / TILE;
+  uint32_t n1 = n / TILE;
+  uint32_t p1 = p / TILE;
+  for (uint32_t i = 0; i < m1; ++i) {
+    for (uint32_t j = 0; j < p1; ++j) {
+      for (uint32_t k = 0; k < n1; ++k) {
+        AlignedDot(&a.ptr[i * n * TILE + k * TILE * TILE],
+                   &b.ptr[k * p * TILE + j * TILE * TILE],
+                   &out->ptr[i * p * TILE + j * TILE * TILE]);
+      }
+    }
+  }
   /// END SOLUTION
 }
 
@@ -466,8 +505,8 @@ PYBIND11_MODULE(ndarray_backend_cpu, m) {
   m.def("ewise_exp", EwiseExp);
   m.def("ewise_tanh", EwiseTanh);
 
-  // m.def("matmul", Matmul);
-  // m.def("matmul_tiled", MatmulTiled);
+  m.def("matmul", Matmul);
+  m.def("matmul_tiled", MatmulTiled);
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);
