@@ -7,9 +7,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <iostream>
-#include <sstream>
-
 namespace needle {
 namespace cuda {
 
@@ -492,6 +489,19 @@ void Matmul(const CudaArray &a, const CudaArray &b, CudaArray *out, uint32_t M,
 // Max and sum reductions
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void ReduceMaxKernel(const scalar_t *a, scalar_t *out, size_t size,
+                                size_t reduce_size) {
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < size) {
+    size_t offset = gid * reduce_size;
+    scalar_t result = a[offset];
+    for (size_t j = 1; j < reduce_size; ++j) {
+      result = max(result, a[offset + j]);
+    }
+    out[gid] = result;
+  }
+}
+
 void ReduceMax(const CudaArray &a, CudaArray *out, size_t reduce_size) {
   /**
    * Reduce by taking maximum over `reduce_size` contiguous blocks.  Even
@@ -504,8 +514,23 @@ void ReduceMax(const CudaArray &a, CudaArray *out, size_t reduce_size) {
    *   redice_size: size of the dimension to reduce over
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  CudaDims dim = CudaOneDim(out->size);
+  ReduceMaxKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, out->size,
+                                           reduce_size);
   /// END SOLUTION
+}
+
+__global__ void ReduceSumKernel(const scalar_t *a, scalar_t *out, size_t size,
+                                size_t reduce_size) {
+  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid < size) {
+    size_t offset = gid * reduce_size;
+    scalar_t result = static_cast<scalar_t>(0.0f);
+    for (size_t j = 0; j < reduce_size; ++j) {
+      result += a[offset + j];
+    }
+    out[gid] = result;
+  }
 }
 
 void ReduceSum(const CudaArray &a, CudaArray *out, size_t reduce_size) {
@@ -519,7 +544,9 @@ void ReduceSum(const CudaArray &a, CudaArray *out, size_t reduce_size) {
    *   redice_size: size of the dimension to reduce over
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  CudaDims dim = CudaOneDim(out->size);
+  ReduceSumKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, out->size,
+                                           reduce_size);
   /// END SOLUTION
 }
 
@@ -596,6 +623,6 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
 
   // m.def("matmul", Matmul);
 
-  // m.def("reduce_max", ReduceMax);
-  // m.def("reduce_sum", ReduceSum);
+  m.def("reduce_max", ReduceMax);
+  m.def("reduce_sum", ReduceSum);
 }
