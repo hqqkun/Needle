@@ -453,6 +453,49 @@ void EwiseTanh(const CudaArray &a, CudaArray *out) {
   EwiseTanhKernel<<<dim.grid, dim.block>>>(a.ptr, out->ptr, out->size);
 }
 
+#define SHEME (TILE * TILE)
+
+__global__ void MatmulKernel(const scalar_t *a, const scalar_t *b, scalar_t *c,
+                             uint32_t M, uint32_t N, uint32_t P) {
+  __shared__ scalar_t bufA[TILE][TILE];
+  __shared__ scalar_t bufB[TILE][TILE];
+
+  int nx = threadIdx.x;
+  int ny = threadIdx.y;
+  int row = blockIdx.y * blockDim.y + ny;
+  int col = blockIdx.x * blockDim.x + nx;
+
+  scalar_t sum = static_cast<scalar_t>(0.0f);
+
+  for (uint32_t k = 0; k < N; k += TILE) {
+    // Load data into shared memory
+    if (row < M && k + nx < N) {
+      bufA[ny][nx] = a[row * N + k + nx];
+    } else {
+      bufA[ny][nx] = static_cast<scalar_t>(0.0f);
+    }
+
+    if (col < P && k + ny < N) {
+      bufB[ny][nx] = b[(k + ny) * P + col];
+    } else {
+      bufB[ny][nx] = static_cast<scalar_t>(0.0f);
+    }
+
+    __syncthreads();
+
+    // Compute partial sum
+    for (uint32_t kk = 0; kk < TILE; ++kk) {
+      sum += bufA[ny][kk] * bufB[kk][nx];
+    }
+
+    __syncthreads();
+  }
+
+  if (row < M && col < P) {
+    c[row * P + col] = sum;
+  }
+}
+
 void Matmul(const CudaArray &a, const CudaArray &b, CudaArray *out, uint32_t M,
             uint32_t N, uint32_t P) {
   /**
@@ -481,7 +524,10 @@ void Matmul(const CudaArray &a, const CudaArray &b, CudaArray *out, uint32_t M,
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  dim3 blockSize(TILE, TILE);
+  dim3 gridSize((P + blockSize.x - 1) / blockSize.x,
+                (M + blockSize.y - 1) / blockSize.y);
+  MatmulKernel<<<gridSize, blockSize>>>(a.ptr, b.ptr, out->ptr, M, N, P);
   /// END SOLUTION
 }
 
@@ -621,7 +667,7 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
   m.def("ewise_exp", EwiseExp);
   m.def("ewise_tanh", EwiseTanh);
 
-  // m.def("matmul", Matmul);
+  m.def("matmul", Matmul);
 
   m.def("reduce_max", ReduceMax);
   m.def("reduce_sum", ReduceSum);
