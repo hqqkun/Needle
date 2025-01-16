@@ -408,7 +408,6 @@ class NDArray:
         new_shape = tuple(
             [(idx.stop - idx.start + idx.step - 1) // idx.step for idx in idxs]
         )
-        print(new_shape)
         # compute new stride
         new_stride = tuple([idx.step * stride for idx, stride in zip(idxs, self.strides)])
         # compute new offset
