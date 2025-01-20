@@ -646,7 +646,19 @@ class NDArray:
         axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        assert self.ndim == len(axes)
+        newshape = []
+        for i in range(self.ndim):
+            newshape.append(self.shape[i] + axes[i][0] + axes[i][1])
+
+        new_array = empty(shape=newshape, device=self.device)
+
+        slices = []
+        for i in range(self.ndim):
+            slices.append(slice(axes[i][0], axes[i][0] + self.shape[i]))
+        new_array[tuple(slices)] = self
+
+        return new_array
         ### END YOUR SOLUTION
 
 
