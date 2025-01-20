@@ -672,7 +672,7 @@ def broadcast_to(array, shape):
 
 
 def reshape(array, newshape):
-    return array.reshape(newshape)
+    return array.compact().reshape(newshape)
 
 
 def maximum(a, b):
