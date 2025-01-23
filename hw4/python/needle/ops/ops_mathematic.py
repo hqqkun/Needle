@@ -538,7 +538,34 @@ class Conv(TensorOp):
 
     def compute(self, A, B):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        paddings = (
+            (0, 0),
+            (self.padding, self.padding),
+            (self.padding, self.padding),
+            (0, 0),
+        )
+        padded_A = A.pad(paddings)
+
+        N, H, W, C_in0 = padded_A.shape
+        K0, K1, C_in1, C_out = B.shape
+        assert K0 == K1 and C_in0 == C_in1
+
+        inner_dim = K0 * K0 * C_in0
+        Ns, Hs, Ws, Cs = padded_A.strides
+
+        # consider strides
+        out_H = ((H - K0 + 1) + self.stride - 1) // self.stride
+        out_W = ((W - K0 + 1) + self.stride - 1) // self.stride
+
+        im2col = array_api.reshape(
+            padded_A.as_strided(
+                shape=(N, out_H, out_W, K0, K0, C_in0),
+                strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs),
+            ),
+            ((N * out_H * out_W), inner_dim),
+        )
+        out = im2col @ array_api.reshape(B, (inner_dim, C_out))
+        return array_api.reshape(out, (N, out_H, out_W, C_out))
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):

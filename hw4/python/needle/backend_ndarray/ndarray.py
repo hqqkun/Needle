@@ -667,7 +667,7 @@ class NDArray:
         for i in range(self.ndim):
             newshape.append(self.shape[i] + axes[i][0] + axes[i][1])
 
-        new_array = empty(shape=newshape, device=self.device)
+        new_array = full(shape=newshape, fill_value=0.0, device=self.device)
 
         slices = []
         for i in range(self.ndim):

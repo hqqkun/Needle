@@ -384,7 +384,7 @@ void MatmulTiled(const AlignedArray &a, const AlignedArray &b,
    *
    */
   /// BEGIN SOLUTION
-  uint32_t size = m * n;
+  uint32_t size = m * p;
   for (uint32_t i = 0; i < size; ++i) {
     out->ptr[i] = static_cast<scalar_t>(0.0f);
   }
