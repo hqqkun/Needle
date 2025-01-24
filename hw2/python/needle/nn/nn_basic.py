@@ -152,7 +152,7 @@ class SoftmaxLoss(Module):
 
         batch, classes = logits.shape[0], logits.shape[1]
         sum_exp_Z = ops.logsumexp(logits, axes=(1,))
-        y_one_hot = init.one_hot(classes, y)
+        y_one_hot = init.one_hot(classes, y, device=y.device)
         value_y = (logits * y_one_hot).sum(axes=(1,))
         sum_error = (sum_exp_Z - value_y).sum()
         return sum_error / batch
