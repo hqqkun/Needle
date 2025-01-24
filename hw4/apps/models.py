@@ -1,28 +1,67 @@
 import sys
-sys.path.append('./python')
+
+sys.path.append("./python")
 import needle as ndl
 import needle.nn as nn
 import math
 import numpy as np
+
 np.random.seed(0)
+
+
+def ConvBN(a, b, k, s, device=None):
+    return nn.Sequential(
+        nn.Conv(a, b, k, s, device=device),
+        nn.BatchNorm2d(dim=b, device=device),
+        nn.ReLU(),
+    )
+
+
+def ResidualBlock(a, b, k, s, device=None):
+    return nn.Residual(
+        nn.Sequential(
+            ConvBN(a, b, k, s, device=device),
+            ConvBN(a, b, k, s, device=device),
+        )
+    )
 
 
 class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         ### BEGIN YOUR SOLUTION ###
-        raise NotImplementedError() ###
+        self.model = nn.Sequential(
+            ConvBN(3, 16, 7, 4, device=device),
+            ConvBN(16, 32, 3, 2, device=device),
+            ResidualBlock(32, 32, 3, 1, device=device),
+            ConvBN(32, 64, 3, 2, device=device),
+            ConvBN(64, 128, 3, 2, device=device),  #! THIS is not 32
+            ResidualBlock(128, 128, 3, 1, device=device),
+            nn.Flatten(),
+            nn.Linear(in_features=128, out_features=128, device=device),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=10, device=device),
+        )
         ### END YOUR SOLUTION
 
     def forward(self, x):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return self.model(x)
         ### END YOUR SOLUTION
 
 
 class LanguageModel(nn.Module):
-    def __init__(self, embedding_size, output_size, hidden_size, num_layers=1,
-                 seq_model='rnn', seq_len=40, device=None, dtype="float32"):
+    def __init__(
+        self,
+        embedding_size,
+        output_size,
+        hidden_size,
+        num_layers=1,
+        seq_model="rnn",
+        seq_len=40,
+        device=None,
+        dtype="float32",
+    ):
         """
         Consists of an embedding layer, a sequence model (either RNN or LSTM), and a
         linear layer.
@@ -60,6 +99,10 @@ if __name__ == "__main__":
     model = ResNet9()
     x = ndl.ops.randu((1, 32, 32, 3), requires_grad=True)
     model(x)
-    cifar10_train_dataset = ndl.data.CIFAR10Dataset("data/cifar-10-batches-py", train=True)
-    train_loader = ndl.data.DataLoader(cifar10_train_dataset, 128, ndl.cpu(), dtype="float32")
+    cifar10_train_dataset = ndl.data.CIFAR10Dataset(
+        "data/cifar-10-batches-py", train=True
+    )
+    train_loader = ndl.data.DataLoader(
+        cifar10_train_dataset, 128, ndl.cpu(), dtype="float32"
+    )
     print(cifar10_train_dataset[1][0].shape)
