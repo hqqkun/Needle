@@ -239,11 +239,16 @@ class Summation(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        reduce_axes = list(self.axes) if self.axes else list(range(a.ndim))
-
-        for axis in reversed(sorted(reduce_axes)):
-            a = array_api.sum(a, axis=axis)
-        return a
+        if self.axes is not None:
+            reduce_axes = []
+            if isinstance(self.axes, int):
+                self.axes = (self.axes,)
+            reduce_axes = list(self.axes)
+            for axis in reversed(sorted(reduce_axes)):
+                a = array_api.sum(a, axis=(axis,))
+            return a
+        else:
+            return array_api.sum(a)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad: Tensor, node: Tensor):
