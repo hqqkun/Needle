@@ -131,8 +131,15 @@ def get_batch(batches, i, bptt, device=None, dtype=None):
     """
     ### BEGIN YOUR SOLUTION
     seq_len = batches.shape[0]
-    data = batches[i : min(i + bptt, seq_len)]
-    target = batches[i + 1 : min(i + bptt + 1, seq_len)].flatten()
+    if i + bptt >= seq_len:
+        data = batches[i:-1]
+        target = batches[i + 1 :].flatten()
+    else:
+        data = batches[i : i + bptt]
+        target = batches[i + 1 : i + bptt + 1].flatten()
+
+    assert len(data.shape) == 2
+    assert data.shape[0] * data.shape[1] == target.shape[0]
     return (
         Tensor(data, device=device, dtype=dtype),
         Tensor(target, device=device, dtype=dtype),

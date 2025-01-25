@@ -228,6 +228,7 @@ def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss(), device=None):
         dataloader, model, loss_fn=loss_fn, device=device
     )
     print(f"Evaluation Acc: {avg_acc}, Evaluation Loss: {avg_loss}")
+    return (avg_acc, avg_loss)
     ### END YOUR SOLUTION
 
 
@@ -262,7 +263,35 @@ def epoch_general_ptb(
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    if opt:
+        model.train()
+    else:
+        model.eval()
+
+    numExamples = 0
+    totalLoss = 0.0
+    acc = 0.0
+
+    nbatch, _ = data.shape
+    hidden = None
+    for i in range(0, nbatch, seq_len):
+        X, y = ndl.data.get_batch(data, i, seq_len, device=device, dtype=dtype)
+        numExamples += y.shape[0]
+        logits, hidden = model(X, hidden)
+ 
+        loss = loss_fn(logits, y)
+
+        labels = np.argmax(logits.numpy(), axis=1)
+        acc += np.sum(labels == y.numpy())
+        totalLoss += loss.data.numpy() * y.shape[0]
+
+        if opt:
+            opt.reset_grad()
+            loss.backward()
+            opt.step()
+
+    return (acc / numExamples, totalLoss / numExamples)
+
     ### END YOUR SOLUTION
 
 
@@ -274,7 +303,7 @@ def train_ptb(
     optimizer=ndl.optim.SGD,
     lr=4.0,
     weight_decay=0.0,
-    loss_fn=nn.SoftmaxLoss,
+    loss_fn=nn.SoftmaxLoss(),
     clip=None,
     device=None,
     dtype="float32",
@@ -299,12 +328,25 @@ def train_ptb(
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    opt = optimizer(model.parameters(), lr=lr, weight_decay=weight_decay)
+    for epoch in range(n_epochs):
+        avg_acc, avg_loss = epoch_general_ptb(
+            data,
+            model,
+            seq_len=seq_len,
+            loss_fn=loss_fn,
+            opt=opt,
+            clip=clip,
+            device=device,
+            dtype=dtype,
+        )
+        print(f"Epoch: {epoch}, Acc: {avg_acc}, Loss: {avg_loss}")
+    return (avg_acc, avg_loss)
     ### END YOUR SOLUTION
 
 
 def evaluate_ptb(
-    model, data, seq_len=40, loss_fn=nn.SoftmaxLoss, device=None, dtype="float32"
+    model, data, seq_len=40, loss_fn=nn.SoftmaxLoss(), device=None, dtype="float32"
 ):
     """
     Computes the test accuracy and loss of the model.
@@ -321,7 +363,11 @@ def evaluate_ptb(
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    avg_acc, avg_loss = epoch_general_ptb(
+        data, model, seq_len=seq_len, loss_fn=loss_fn, device=device, dtype=dtype
+    )
+    print(f"Evaluation Acc: {avg_acc}, Evaluation Loss: {avg_loss}")
+    return (avg_acc, avg_loss)
     ### END YOUR SOLUTION
 
 
