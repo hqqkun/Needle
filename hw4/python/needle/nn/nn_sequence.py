@@ -1,10 +1,14 @@
 """The module.
 """
+
+import math
 from typing import List
 from needle.autograd import Tensor
 from needle import ops
 import needle.init as init
 import numpy as np
+
+from needle.ops.ops_mathematic import tanh, relu
 from .nn_basic import Parameter, Module
 
 
@@ -17,8 +21,17 @@ class Sigmoid(Module):
         raise NotImplementedError()
         ### END YOUR SOLUTION
 
+
 class RNNCell(Module):
-    def __init__(self, input_size, hidden_size, bias=True, nonlinearity='tanh', device=None, dtype="float32"):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        bias=True,
+        nonlinearity="tanh",
+        device=None,
+        dtype="float32",
+    ):
         """
         Applies an RNN cell with tanh or ReLU nonlinearity.
 
@@ -38,7 +51,48 @@ class RNNCell(Module):
         """
         super().__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        value = 1 / math.sqrt(hidden_size)
+        self.W_ih = Parameter(
+            init.rand(
+                input_size,
+                hidden_size,
+                low=-value,
+                high=value,
+                dtype=dtype,
+                device=device,
+            )
+        )
+        self.W_hh = Parameter(
+            init.rand(
+                hidden_size,
+                hidden_size,
+                low=-value,
+                high=value,
+                dtype=dtype,
+                device=device,
+            )
+        )
+        self.bias_ih = (
+            Parameter(
+                init.rand(
+                    hidden_size, low=-value, high=value, dtype=dtype, device=device
+                )
+            )
+            if bias
+            else None
+        )
+        self.bias_hh = (
+            Parameter(
+                init.rand(
+                    hidden_size, low=-value, high=value, dtype=dtype, device=device
+                )
+            )
+            if bias
+            else None
+        )
+        self.nonlinearity = tanh if nonlinearity == "tanh" else relu
         ### END YOUR SOLUTION
 
     def forward(self, X, h=None):
@@ -52,13 +106,36 @@ class RNNCell(Module):
         h' of shape (bs, hidden_size): Tensor contianing the next hidden state
             for each element in the batch.
         """
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        ### BEGIN YOUR SOLUTION)
+        bs, _ = X.shape
+        if h is None:
+            h = init.zeros(bs, self.hidden_size, dtype=X.dtype, device=X.device)
+
+        print("!" * 20)
+        print(X.shape, self.W_ih.shape, h.shape, self.W_hh.shape)
+        print("!" * 20)
+        h_ = X @ self.W_ih + h @ self.W_hh
+
+        if self.bias_ih:
+            h_ = h_ + self.bias_ih.broadcast_to(h_.shape)
+        if self.bias_hh:
+            h_ = h_ + self.bias_hh.broadcast_to(h_.shape)
+
+        return self.nonlinearity(h_)
         ### END YOUR SOLUTION
 
 
 class RNN(Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, nonlinearity='tanh', device=None, dtype="float32"):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        num_layers=1,
+        bias=True,
+        nonlinearity="tanh",
+        device=None,
+        dtype="float32",
+    ):
         """
         Applies a multi-layer RNN with tanh or ReLU non-linearity to an input sequence.
 
@@ -82,7 +159,20 @@ class RNN(Module):
         """
         super().__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.rnn_cells = [
+            RNNCell(
+                input_size=input_size if layer == 0 else hidden_size,
+                hidden_size=hidden_size,
+                bias=bias,
+                nonlinearity=nonlinearity,
+                device=device,
+                dtype=dtype,
+            )
+            for layer in range(num_layers)
+        ]
         ### END YOUR SOLUTION
 
     def forward(self, X, h0=None):
@@ -98,12 +188,33 @@ class RNN(Module):
         h_n of shape (num_layers, bs, hidden_size) containing the final hidden state for each element in the batch.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        seq_len, bs, _ = X.shape
+        if h0 is None:
+            h0 = init.zeros(
+                self.num_layers, bs, self.hidden_size, dtype=X.dtype, device=X.device
+            )
+        list_X = ops.split(X, axis=0)  # tuple of (bs, input_size)
+        list_h = list(ops.split(h0, axis=0))  # list of (bs, hidden_size)
+        output = []
+
+        for time in range(seq_len):
+            input = list_X[time]
+            for layer in range(self.num_layers):
+                list_h[layer] = self.rnn_cells[layer](input, list_h[layer])
+                input = list_h[layer]
+            output.append(list_h[-1])
+
+        # now output is a list of (bs, hidden_size)
+        output = ops.stack(output, axis=0)  # (seq_len, bs, hidden_size)
+        list_h = ops.stack(list_h, axis=0)  # (num_layers, bs, hidden_size)
+        return (output, list_h)
         ### END YOUR SOLUTION
 
 
 class LSTMCell(Module):
-    def __init__(self, input_size, hidden_size, bias=True, device=None, dtype="float32"):
+    def __init__(
+        self, input_size, hidden_size, bias=True, device=None, dtype="float32"
+    ):
         """
         A long short-term memory (LSTM) cell.
 
@@ -124,7 +235,6 @@ class LSTMCell(Module):
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION
-
 
     def forward(self, X, h=None):
         """
@@ -148,7 +258,15 @@ class LSTMCell(Module):
 
 
 class LSTM(Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, device=None, dtype="float32"):
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        num_layers=1,
+        bias=True,
+        device=None,
+        dtype="float32",
+    ):
         super().__init__()
         """
         Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
@@ -194,6 +312,7 @@ class LSTM(Module):
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION
+
 
 class Embedding(Module):
     def __init__(self, num_embeddings, embedding_dim, device=None, dtype="float32"):
