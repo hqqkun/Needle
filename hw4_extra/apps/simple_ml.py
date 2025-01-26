@@ -278,6 +278,13 @@ def epoch_general_ptb(
         X, y = ndl.data.get_batch(data, i, seq_len, device=device, dtype=dtype)
         numExamples += y.shape[0]
         logits, hidden = model(X, hidden)
+        
+        if isinstance(hidden, tuple):
+            h, c = hidden
+            hidden = (h.detach(), c.detach())
+        else:
+            hidden = hidden.detach()
+        
 
         loss = loss_fn(logits, y)
 
