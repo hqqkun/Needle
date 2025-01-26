@@ -3,7 +3,6 @@ import sys
 sys.path.append("./python")
 import needle as ndl
 import needle.nn as nn
-import math
 import numpy as np
 
 np.random.seed(0)
@@ -81,14 +80,37 @@ class LanguageModel(nn.Module):
             device=device,
             dtype=dtype,
         )
-        self.seq_model = nn.RNN if seq_model == "rnn" else nn.LSTM
-        self.seq_model = self.seq_model(
+        
+        self.seq_model = None
+        
+        if seq_model == "rnn":
+            self.seq_model = nn.RNN(
             input_size=embedding_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             device=device,
             dtype=dtype,
         )
+        elif seq_model == "lstm":
+            self.seq_model = nn.LSTM(
+            input_size=embedding_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            device=device,
+            dtype=dtype,
+        )
+        elif seq_model == "transformer":
+            self.seq_model = nn.Transformer(
+                embedding_size=embedding_size,
+                hidden_size=hidden_size,
+                num_layers=num_layers,
+                device=device,
+                dtype=dtype,
+                sequence_len=seq_len,
+            )
+        else:
+            raise ValueError("seq_model must be 'rnn' or 'lstm' or 'transformer'")
+
         self.linear = nn.Linear(
             in_features=hidden_size,
             out_features=output_size,

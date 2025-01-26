@@ -302,7 +302,6 @@ class TransformerLayer(Module):
         """
 
         batch_size, seq_len, x_dim = x.shape
-
         ### BEGIN YOUR SOLUTION
         x = self.path1(x)
         x = ops.reshape(x, (batch_size * seq_len, x_dim))
@@ -338,16 +337,49 @@ class Transformer(Module):
         self.batch_first = batch_first
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.positional_embedding = Embedding(
+            sequence_len,
+            embedding_size,
+            device=device,
+            dtype=dtype,
+        )
+        self.layers = Sequential(
+            *[
+                TransformerLayer(
+                    embedding_size,
+                    num_head,
+                    dim_head,
+                    hidden_size,
+                    dropout=dropout,
+                    causal=causal,
+                    device=device,
+                    dtype=dtype,
+                )
+                for _ in range(num_layers)
+            ]
+        )
         ### END YOUR SOLUTION
 
+    def create_timestep_tensor(self, seq_len, batch_size, device, dtype):
+        """
+        Create a tensor of shape (seq_len, batch_size) with values from 0 to seq_len - 1.
+        """
+        ts = np.broadcast_to(np.arange(seq_len).reshape((seq_len, 1)), (seq_len, batch_size))
+        return Tensor(ts, device=device, dtype=dtype)
+        
     def forward(self, x, h=None):
 
         if not self.batch_first:
             x = ops.transpose(x, axes=(0, 1))
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        batch_size, seq_len, _ = x.shape        # (batch_size, seq_len, embedding_size)
+        ts = self.create_timestep_tensor(seq_len, batch_size, x.device, x.dtype)
+        ts = self.positional_embedding(ts)      # (seq_len, batch_size, embedding_size)
+        ts = ops.transpose(ts, axes=(0, 1))     # (batch_size, seq_len, embedding_size)
+        
+        x = x + ts
+        x = self.layers(x)                      # (batch_size, seq_len, embedding_size)
         ### END YOUR SOLUTION
 
         if not self.batch_first:

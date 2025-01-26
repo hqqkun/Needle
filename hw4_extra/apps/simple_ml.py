@@ -274,7 +274,7 @@ def epoch_general_ptb(
 
     nbatch, _ = data.shape
     hidden = None
-    for i in range(0, nbatch, seq_len):
+    for i in range(0, nbatch - 1, seq_len):
         X, y = ndl.data.get_batch(data, i, seq_len, device=device, dtype=dtype)
         numExamples += y.shape[0]
         logits, hidden = model(X, hidden)
