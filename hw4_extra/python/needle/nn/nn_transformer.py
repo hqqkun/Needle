@@ -5,7 +5,16 @@ from needle import ops
 import needle.init as init
 import numpy as np
 from .nn_sequence import Embedding
-from .nn_basic import Parameter, Module, ReLU, Dropout, LayerNorm1d, Linear, Sequential
+from .nn_basic import (
+    Parameter,
+    Module,
+    ReLU,
+    Dropout,
+    LayerNorm1d,
+    Linear,
+    Residual,
+    Sequential,
+)
 
 
 class MultiHeadAttention(Module):
@@ -259,7 +268,30 @@ class TransformerLayer(Module):
         self.dtype = dtype
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.path1 = Residual(
+            Sequential(
+                AttentionLayer(
+                    q_features,
+                    num_head,
+                    dim_head,
+                    dropout=dropout,
+                    causal=causal,
+                    device=device,
+                    dtype=dtype,
+                ),
+                Dropout(p=dropout),
+            )
+        )
+        self.path2 = Residual(
+            Sequential(
+                LayerNorm1d(q_features, device=device, dtype=dtype),
+                Linear(q_features, hidden_size, device=device, dtype=dtype),
+                ReLU(),
+                Dropout(p=dropout),
+                Linear(hidden_size, q_features, device=device, dtype=dtype),
+                Dropout(p=dropout),
+            )
+        )
         ### END YOUR SOLUTION
 
     def forward(self, x):
@@ -272,7 +304,10 @@ class TransformerLayer(Module):
         batch_size, seq_len, x_dim = x.shape
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        x = self.path1(x)
+        x = ops.reshape(x, (batch_size * seq_len, x_dim))
+        x = self.path2(x)
+        x = ops.reshape(x, (batch_size, seq_len, x_dim))
         ### END YOUR SOLUTION
 
         return x
