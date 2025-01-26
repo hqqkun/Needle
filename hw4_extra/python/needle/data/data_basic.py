@@ -4,7 +4,6 @@ from ..autograd import Tensor
 from typing import Iterator, Optional, List, Sized, Union, Iterable, Any
 
 
-
 class Dataset:
     r"""An abstract class representing a `Dataset`.
 
@@ -21,7 +20,7 @@ class Dataset:
 
     def __len__(self) -> int:
         raise NotImplementedError
-    
+
     def apply_transforms(self, x):
         if self.transforms is not None:
             # apply the transforms
@@ -40,7 +39,8 @@ class DataLoader:
             (default: ``1``).
         shuffle (bool, optional): set to ``True`` to have the data reshuffled
             at every epoch (default: ``False``).
-     """
+    """
+
     dataset: Dataset
     batch_size: Optional[int]
 
@@ -55,17 +55,32 @@ class DataLoader:
         self.shuffle = shuffle
         self.batch_size = batch_size
         if not self.shuffle:
-            self.ordering = np.array_split(np.arange(len(dataset)), 
-                                           range(batch_size, len(dataset), batch_size))
+            self.ordering = np.array_split(
+                np.arange(len(dataset)), range(batch_size, len(dataset), batch_size)
+            )
 
     def __iter__(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.index = 0
+        if self.shuffle:
+            orders = np.arange(len(self.dataset))
+            np.random.shuffle(orders)
+            self.ordering = np.array_split(
+                orders, range(self.batch_size, len(self.dataset), self.batch_size)
+            )
         ### END YOUR SOLUTION
         return self
 
     def __next__(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if self.index < len(self.ordering):
+            # prepare data
+            datas: tuple = self.dataset[self.ordering[self.index]]
+            datas = tuple([Tensor(data) for data in datas])
+            # at last
+            self.index += 1
+            # return a tuple
+            return datas
+        else:
+            raise StopIteration
         ### END YOUR SOLUTION
-

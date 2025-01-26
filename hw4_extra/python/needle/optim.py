@@ -1,4 +1,5 @@
 """Optimization module"""
+
 import needle as ndl
 import numpy as np
 
@@ -25,7 +26,18 @@ class SGD(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for w in self.params:
+            if self.weight_decay > 0:
+                grad = (w.grad + self.weight_decay * w.data).data
+            else:
+                grad = w.grad.data
+            if w in self.u:
+                self.u[w] = (
+                    self.momentum * self.u[w] + (1 - self.momentum) * grad
+                ).detach()
+            else:
+                self.u[w] = ((1 - self.momentum) * grad).detach()
+            w.data -= ndl.Tensor(self.lr * self.u[w], dtype=w.dtype)
         ### END YOUR SOLUTION
 
     def clip_grad_norm(self, max_norm=0.25):
@@ -60,5 +72,32 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.t = self.t + 1
+        for w in self.params:
+            if w in self.m:
+                m = (
+                    self.beta1 * self.m[w]
+                    + (1 - self.beta1) * (self.weight_decay * w.data + w.grad).data
+                )
+            else:
+                m = ((1 - self.beta1) * (self.weight_decay * w.data + w.grad)).data
+            if w in self.v:
+                v = (
+                    self.beta2 * self.v[w]
+                    + (1 - self.beta2)
+                    * ((self.weight_decay * w.data + w.grad) ** 2).data
+                )
+            else:
+                v = (
+                    (1 - self.beta2) * ((self.weight_decay * w.data + w.grad) ** 2)
+                ).data
+            self.m[w] = m
+            self.v[w] = v
+            m_hat = m / (1 - self.beta1**self.t)
+            v_hat = v / (1 - self.beta2**self.t)
+
+            w.data -= ndl.Tensor(
+                self.lr * (m_hat / (v_hat**0.5 + self.eps)),
+                dtype=w.dtype,
+            )
+        ## END YOUR SOLUTION
