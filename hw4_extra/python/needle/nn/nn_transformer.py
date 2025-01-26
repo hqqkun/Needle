@@ -204,7 +204,35 @@ class AttentionLayer(Module):
         result = None
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_q = self.prenorm_q(ops.reshape(q, (batch_size * queries_len, q_dim)))
+        new_k = self.prenorm_k(ops.reshape(k, (batch_size * keys_values_len, k_dim)))
+        new_v = self.prenorm_v(ops.reshape(v, (batch_size * keys_values_len, v_dim)))
+
+        new_q = ops.reshape(
+            self.q_projection(new_q),
+            (batch_size, queries_len, self.num_head, self.dim_head),
+        )
+        new_k = ops.reshape(
+            self.k_projection(new_k),
+            (batch_size, keys_values_len, self.num_head, self.dim_head),
+        )
+        new_v = ops.reshape(
+            self.v_projection(new_v),
+            (batch_size, keys_values_len, self.num_head, self.dim_head),
+        )
+
+        new_q = ops.transpose(new_q, axes=(1, 2))
+        new_k = ops.transpose(new_k, axes=(1, 2))
+        new_v = ops.transpose(new_v, axes=(1, 2))
+
+        result, _ = self.attn(new_q, new_k, new_v)
+        result = ops.transpose(result, axes=(1, 2))
+        result = ops.reshape(
+            result, (batch_size * keys_values_len, self.num_head * self.dim_head)
+        )
+
+        result = self.out_projection(result)
+        result = ops.reshape(result, (batch_size, keys_values_len, self.out_features))
         ### END YOUR SOLUTION
 
         return result
